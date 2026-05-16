@@ -1,0 +1,14 @@
+[Unit]
+Description=Football Predictor Web App (Qatar 2022)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/football-analysis/web-app
+ExecStart=/opt/football-analysis/.venv/bin/python3 -m uvicorn app:app --host 127.0.0.1 --port 8080
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚽ Football Predictor — Qatar 2022</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0e1a;
+            --card-bg: #131826;
+            --border-glow: #1a2340;
+            --gold: #f0b429;
+            --green: #28a745;
+            --red: #dc3545;
+            --blue: #0d6efd;
+        }
+        body {
+            background: var(--bg-dark);
+            color: #e0e0e0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #0a0e1a 0%, #1a2340 100%);
+            border-bottom: 1px solid var(--border-glow);
+        }
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: var(--gold) !important;
+        }
+        .stats-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+        .stats-value {
+            font-size: 2rem;
+            font-weight: 800;
+            display: block;
+        }
+        .stats-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6c757d;
+        }
+        .match-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: all 0.2s;
+        }
+        .match-card:hover {
+            border-color: #2a3a6a;
+        }
+        .match-card.correct {
+            border-left: 4px solid var(--green);
+        }
+        .match-card.incorrect {
+            border-left: 4px solid var(--red);
+        }
+        .match-card.unbet {
+            border-left: 4px solid #333;
+        }
+        .team-name {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .score-badge {
+            background: #1a2340;
+            border-radius: 8px;
+            padding: 0.25rem 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            font-family: 'Courier New', monospace;
+        }
+        .bet-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50% !important;
+            font-weight: 800;
+            font-size: 1.25rem;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .bet-btn:hover {
+            transform: scale(1.1);
+        }
+        .bet-btn.active {
+            border-color: var(--gold) !important;
+            box-shadow: 0 0 15px rgba(240, 180, 41, 0.3);
+        }
+        .bet-btn.h-btn { color: #fff; background: #1a4a8a; }
+        .bet-btn.h-btn:hover, .bet-btn.h-btn.active { background: #0d6efd; }
+        .bet-btn.d-btn { color: #fff; background: #7a5a1a; }
+        .bet-btn.d-btn:hover, .bet-btn.d-btn.active { background: var(--gold); color: #000; }
+        .bet-btn.a-btn { color: #fff; background: #8a2a1a; }
+        .bet-btn.a-btn:hover, .bet-btn.a-btn.active { background: var(--red); }
+        .model-tag {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            margin: 0.1rem;
+            display: inline-block;
+        }
+        .model-correct { background: rgba(40, 167, 69, 0.2); color: #5cb85c; }
+        .model-wrong { background: rgba(220, 53, 69, 0.2); color: #e74c3c; }
+        .winner-team { color: var(--gold); font-weight: 800; }
+        .phase-nav {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .phase-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            padding: 0.4rem 1rem;
+            color: #aaa;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .phase-btn:hover, .phase-btn.active {
+            background: #1a2340;
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+        .prediction-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6c757d;
+            margin-top: 0.5rem;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .bet-placed-indicator {
+            animation: pulse 1s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <span class="navbar-brand">⚽ FOOTBALL PREDICTOR</span>
+            <span class="text-muted small">Qatar 2022 · Validación</span>
+            <button class="btn btn-outline-danger btn-sm" onclick="resetAll()">🔄 Reset</button>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <!-- Stats Dashboard -->
+        <div class="row g-3 mb-4" id="stats-dashboard">
+            <div class="col-6 col-md-3">
+                <div class="stats-card">
+                    <span class="stats-value text-info" id="stat-total">0</span>
+                    <span class="stats-label">Partidos</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stats-card">
+                    <span class="stats-value text-success" id="stat-correct">0</span>
+                    <span class="stats-label">Tus Aciertos</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stats-card">
+                    <span class="stats-value text-warning" id="stat-accuracy">0%</span>
+                    <span class="stats-label">Tu Precisión</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stats-card">
+                    <span class="stats-value" style="color: #0d6efd;" id="stat-xgb">0%</span>
+                    <span class="stats-label">XGBoost</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Comparison Bar -->
+        <div class="row g-2 mb-3" id="model-bar">
+            <div class="col-md-12">
+                <div class="d-flex gap-2 align-items-center justify-content-center flex-wrap">
+                    <span class="badge" style="background: #0d6efd;">🤖 Modelos:</span>
+                    <span class="badge bg-secondary" id="model-xgb">XGBoost: --%</span>
+                    <span class="badge bg-secondary" id="model-mlp">MLP: --%</span>
+                    <span class="badge bg-secondary" id="model-lr">LogReg: --%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase Filter -->
+        <div class="phase-nav">
+            <button class="phase-btn active" onclick="filterPhase('all', this)">🏆 Todos</button>
+            <button class="phase-btn" onclick="filterPhase('group', this)">📋 Fase Grupos</button>
+            <button class="phase-btn" onclick="filterPhase('r16', this)">🔁 Octavos</button>
+            <button class="phase-btn" onclick="filterPhase('qf', this)">🔲 Cuartos</button>
+            <button class="phase-btn" onclick="filterPhase('sf', this)">🏅 Semis</button>
+            <button class="phase-btn" onclick="filterPhase('final', this)">👑 Final</button>
+        </div>
+
+        <!-- Match List -->
+        <div id="match-list"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ─── Data ────────────────────────────────────────────────
+        let matches = [];
+        let bets = {};
+        let currentPhase = 'all';
+
+        // Phase mapping (by match index)
+        const PHASE_MAP = {
+            'group': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47],
+            'r16': [48,49,50,51,52,53,54,55],
+            'qf': [56,57,58,59],
+            'sf': [60,61],
+            'final': [62,63]  // 3rd place match (62) + Final (63)
+        };
+
+        async function loadData() {
+            const [matchesRes, statsRes] = await Promise.all([
+                fetch('/api/matches'),
+                fetch('/api/stats')
+            ]);
+            matches = await matchesRes.json();
+            const stats = await statsRes.json();
+            
+            // Load bets from localStorage
+            bets = JSON.parse(localStorage.getItem('football_bets') || '{}');
+            
+            renderAll(stats);
+        }
+
+        function renderAll(stats) {
+            renderStats(stats);
+            renderMatches();
+        }
+
+        function renderStats(stats) {
+            document.getElementById('stat-total').textContent = stats.total_matches;
+            document.getElementById('stat-correct').textContent = stats.user.correct;
+            document.getElementById('stat-accuracy').textContent = stats.user.pct + '%';
+            document.getElementById('stat-xgb').textContent = stats.models.xgboost.pct + '%';
+            
+            document.getElementById('model-xgb').textContent = `XGBoost: ${stats.models.xgboost.pct}%`;
+            document.getElementById('model-mlp').textContent = `MLP: ${stats.models.mlp.pct}%`;
+            document.getElementById('model-lr').textContent = `LogReg: ${stats.models.lr.pct}%`;
+        }
+
+        function renderMatches() {
+            const container = document.getElementById('match-list');
+            container.innerHTML = '';
+            
+            const filtered = currentPhase === 'all' 
+                ? matches 
+                : matches.filter((_, i) => PHASE_MAP[currentPhase]?.includes(i));
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-5">No matches in this phase</div>';
+                return;
+            }
+            
+            filtered.forEach((m, idx) => {
+                const globalIdx = matches.indexOf(m);
+                const key = m.date + m.home + m.away;
+                const userBet = bets[key] || '';
+                const isCorrect = userBet && userBet === m.result;
+                const statusClass = userBet ? (isCorrect ? 'correct' : 'incorrect') : 'unbet';
+                
+                const xgbOk = m.xgboost_pred === m.result;
+                const mlpOk = m.mlp_neural_network_pred === m.result;
+                const lrOk = m.logistic_regression_pred === m.result;
+                
+                let phaseLabel = getPhaseLabel(globalIdx);
+                
+                const card = document.createElement('div');
+                card.className = `match-card ${statusClass}`;
+                card.id = `match-${globalIdx}`;
+                card.innerHTML = `
+                    <div class="row align-items-center">
+                        <div class="col-12 mb-2">
+                            <small class="text-muted">${m.date} · ${phaseLabel}</small>
+                        </div>
+                        <div class="col-5 col-md-4 text-end">
+                            <span class="team-name ${m.result === 'H' ? 'winner-team' : ''}">${m.home}</span>
+                        </div>
+                        <div class="col-2 col-md-1 text-center">
+                            <span class="score-badge">${m.home_score}-${m.away_score}</span>
+                        </div>
+                        <div class="col-5 col-md-4 text-start">
+                            <span class="team-name ${m.result === 'A' ? 'winner-team' : ''}">${m.away}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row align-items-center mt-2">
+                        <div class="col-12 col-md-4 mb-2 mb-md-0">
+                            <div class="d-flex gap-1 justify-content-center">
+                                <button class="bet-btn h-btn ${userBet === 'H' ? 'active' : ''}" 
+                                        onclick="placeBet('${key}', 'H', ${globalIdx})">H</button>
+                                <button class="bet-btn d-btn ${userBet === 'D' ? 'active' : ''}" 
+                                        onclick="placeBet('${key}', 'D', ${globalIdx})">D</button>
+                                <button class="bet-btn a-btn ${userBet === 'A' ? 'active' : ''}" 
+                                        onclick="placeBet('${key}', 'A', ${globalIdx})">A</button>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 text-center">
+                            <div class="prediction-label">🤖 Predicciones</div>
+                            <div>
+                                <span class="model-tag ${xgbOk ? 'model-correct' : 'model-wrong'}">XGB: ${m.xgboost_pred}</span>
+                                <span class="model-tag ${mlpOk ? 'model-correct' : 'model-wrong'}">MLP: ${m.mlp_neural_network_pred}</span>
+                                <span class="model-tag ${lrOk ? 'model-correct' : 'model-wrong'}">LR: ${m.logistic_regression_pred}</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 text-center">
+                            <div class="prediction-label">${userBet ? (isCorrect ? '✅ ¡Acertaste!' : '❌ Fallaste') : '⏳ Sin apostar'}</div>
+                            <div class="small text-muted">Resultado: <strong>${m.result === 'H' ? m.home : (m.result === 'A' ? m.away : 'Empate')}</strong></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function getPhaseLabel(idx) {
+            if (idx < 48) return '📋 Fase de Grupos';
+            if (idx < 56) return '🔁 Octavos de Final';
+            if (idx < 60) return '🔲 Cuartos de Final';
+            if (idx < 62) return '🏅 Semifinal';
+            if (idx === 62) return '🥉 Tercer Puesto';
+            return '👑 Final';
+        }
+
+        async function placeBet(key, prediction, matchIdx) {
+            bets[key] = prediction;
+            localStorage.setItem('football_bets', JSON.stringify(bets));
+            
+            // Also sync to server
+            try {
+                const res = await fetch('/api/bet', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({match_key: key, prediction: prediction})
+                });
+                const data = await res.json();
+                
+                // Reload stats
+                const statsRes = await fetch('/api/stats');
+                const stats = await statsRes.json();
+                renderStats(stats);
+                
+                // Highlight the match
+                const m = matches[matchIdx];
+                const card = document.getElementById(`match-${matchIdx}`);
+                if (card) {
+                    card.className = `match-card ${data.is_correct ? 'correct' : 'incorrect'}`;
+                    card.classList.add('bet-placed-indicator');
+                    setTimeout(() => card.classList.remove('bet-placed-indicator'), 1000);
+                }
+                
+                renderMatches();
+            } catch(e) {
+                console.error('Error placing bet:', e);
+                renderMatches();
+            }
+        }
+
+        async function resetAll() {
+            if (!confirm('¿Resetear todas las apuestas?')) return;
+            
+            localStorage.removeItem('football_bets');
+            bets = {};
+            await fetch('/api/reset', { method: 'POST' });
+            
+            const statsRes = await fetch('/api/stats');
+            const stats = await statsRes.json();
+            renderStats(stats);
+            renderMatches();
+        }
+
+        function filterPhase(phase, btn) {
+            currentPhase = phase;
+            document.querySelectorAll('.phase-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderMatches();
+        }
+
+        // ─── Init ────────────────────────────────────────────────
+        loadData();
+    </script>
+</body>
+</html>

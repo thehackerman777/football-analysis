@@ -3,14 +3,17 @@
 Sistema de análisis predictivo de fútbol con **OCI (Opción D)** + **AWS (Opción A)**.
 Validado con los 64 partidos del **Mundial de Qatar 2022**.
 
+## 🔗 Web App
+**http://18.213.174.229/** — Interfaz estilo betting para validar predicciones
+
 ## Resultados 🏆
 
-| Modelo | Precisión (Qatar 2022) |
-|--------|----------------------|
-| 🥇 **XGBoost** | **54.7%** |
-| 🥈 **MLP (Neural Network)** | **53.1%** |
-| 🥉 **Logistic Regression** | **45.3%** |
-| *Baseline aleatorio* | *33.3%* |
+| Modelo | Aciertos | Precisión |
+|--------|----------|-----------|
+| 🥇 **XGBoost** | 35/64 | **54.7%** |
+| 🥈 **MLP (Neural Network)** | 34/64 | **53.1%** |
+| 🥉 **Logistic Regression** | 29/64 | **45.3%** |
+| *Baseline aleatorio* | *21/64* | *33.3%* |
 
 ### Feature más importante
 **elo_diff** — Diferencia de rating Elo entre equipos (32.5% de importancia en XGBoost)
@@ -18,83 +21,72 @@ Validado con los 64 partidos del **Mundial de Qatar 2022**.
 ## Arquitectura
 
 ```
-┌─────────────────────┐     ┌──────────────────────┐
-│   Opción D (OCI)     │     │  Opción A (AWS)      │
+┌─────────────────────┐     ┌───────────────────────┐
+│  Opción D (OCI)      │     │  Opción A (AWS)       │
 │  oracle-standard3    │     │  dev-vps (t3.large)   │
-│  VM.Standard3.Flex   │     │                       │
-│  4 OCPU · 64GB RAM   │     │  Exposición de datos  │
-│  Entrenamiento ML    │     │  Validación cruzada   │
-│  Pipeline de datos   │     │  APIs ligeras         │
-└──────────┬───────────┘     └──────────────────────┘
+│  VM.Standard3.Flex   │     │  Web App (port 80)    │
+│  4 OCPU · 64GB RAM   │     │  UI betting interactiva│
+│  Entrenamiento ML    │     │  API REST             │
+│  Pipeline de datos   │     │  Systemd persistente  │
+└──────────┬───────────┘     └───────────────────────┘
            │
-           └──────────► GitHub (código + resultados)
+           └──────────► GitHub
 ```
 
-- **Opción D** (OCI): Entrenamiento de modelos, feature engineering, procesamiento masivo
-- **Opción A** (AWS): Servir resultados, validación, endpoints
-- **Sin integración** con el servidor local de OpenClaw
-- **Fase 3 (LLM/RAG) omitida** por disponibilidad de GPUs
-
-## Estructura del repo
+## Estructura
 
 ```
 football-analysis/
-├── data/
-│   ├── raw/              # Datasets originales (Kaggle 1872-2024)
-│   └── processed/        # Datos limpios con features
-├── cloud_scripts/        # Scripts de pipeline y entrenamiento
-│   ├── data_pipeline.py  # Descarga, limpieza, feature engineering
-│   ├── train_models.py   # Entrenamiento (XGBoost, MLP, Logistic)
-│   └── run_pipeline.py   # Orchestrador (--data-only, --train-only)
-├── notebooks/
-│   └── validation_qatar_2022.ipynb  # Validación y visualizaciones
-├── models/               # Modelos entrenados (.pkl)
-├── docs/                 # Documentación
-├── requirements.txt
+├── data/raw/           # Datasets originales (Kaggle 1872-2024)
+├── data/processed/     # 47,399 registros con features
+├── cloud_scripts/      # Pipeline y entrenamiento
+│   ├── data_pipeline.py
+│   ├── train_models.py
+│   └── run_pipeline.py
+├── web-app/            # UI de validación (FastAPI + HTML/JS)
+│   ├── app.py
+│   ├── templates/index.html
+│   └── data/qatar2022_matches.json (64 partidos)
+├── notebooks/          # Jupyter Notebook de validación
+├── models/             # Modelos .pkl + results_summary.json
+├── deploy/             # Systemd + Nginx config
 └── README.md
 ```
 
-## Setup rápido
+## Infraestructura
+
+| Recurso | Proveedor | Spec | IP | Estado |
+|---------|-----------|------|-----|--------|
+| oracle-standard3 | OCI (Opción D) | 4 OCPU · 64GB RAM | 157.137.219.155 | ✅ Running |
+| dev-vps | AWS (Opción A) | t3.large · 8GB RAM | 18.213.174.229 | ✅ Running |
+
+## Setup
 
 ```bash
-# Clonar
 git clone https://github.com/thehackerman777/football-analysis.git
 cd football-analysis
-
-# Virtual env
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-```
 
-### En OCI
-
-```bash
 # Pipeline completo
 python3 cloud_scripts/run_pipeline.py
 
-# Solo datos
-python3 cloud_scripts/run_pipeline.py --data-only
-
-# Solo entrenamiento (requiere datos procesados)
-python3 cloud_scripts/run_pipeline.py --train-only
+# Web app
+cd web-app && uvicorn app:app --host 0.0.0.0 --port 8080
 ```
 
-## Datos
+## Próximas mejoras 🚀
 
-- **47,399** partidos internacionales (1872-2024)
-- **64** partidos de Qatar 2022 para validación
-- **9** features: elo_home, elo_away, elo_diff, form_home, form_away, form_diff, is_neutral, is_worldcup, year
-
-## Próximas mejoras
-
-- [ ] Incorporar datos de cuotas de apuestas en tiempo real
-- [ ] TSI avanzados + PCA para reducción dimensional
-- [ ] Mejorar predicción de empates (class weighting)
-- [ ] Opción A: API ligera para servir predicciones
-- [ ] DVC para versionado de datasets
+- [ ] **Incorporar squad data** (jugadores, valores de mercado, edad promedio)
+- [ ] **FIFA Rankings históricos** como feature adicional
+- [ ] **Datos de eliminatorias** para contextualizar forma reciente
+- [ ] **Cuotas de apuestas** en tiempo real
+- [ ] **TSI avanzados + PCA** (44 indicadores → componentes principales)
+- [ ] **API-Football** para datos frescos
+- [ ] **Modelo 2026** con datos de clasificación
 
 ## Fuentes
 
 - [Global Football Results (1872-2024)](https://www.kaggle.com/datasets/muhammadehsan02/global-football-results-18722024)
 - [Construction of 2022 Qatar World Cup match result prediction model](https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2024.1410632/full)
+- [Predicting football match outcomes: MLP model based on TSI](https://pmc.ncbi.nlm.nih.gov/articles/PMC12708546/)
