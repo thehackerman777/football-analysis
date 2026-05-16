@@ -4,89 +4,72 @@ Sistema de análisis predictivo de fútbol con **OCI (Opción D)** + **AWS (Opci
 Validado con los 64 partidos del **Mundial de Qatar 2022**.
 
 ## 🔗 Web App
-**http://18.213.174.229/** — Interfaz estilo betting para validar predicciones
+**http://18.213.174.229/** — Tier list + predicciones interactivas
 
 ## Resultados 🏆
 
-| Modelo | Aciertos | Precisión |
-|--------|----------|-----------|
-| 🥇 **XGBoost** | 35/64 | **54.7%** |
-| 🥈 **MLP (Neural Network)** | 34/64 | **53.1%** |
-| 🥉 **Logistic Regression** | 29/64 | **45.3%** |
-| *Baseline aleatorio* | *21/64* | *33.3%* |
+| Modelo | Dataset | Precisión |
+|--------|---------|-----------|
+| 🥇 **Ensemble** (Hist + TSI) | 47k hist + 250 TSI | **64.1%** (41/64) |
+| 🥈 **XGBoost TSI** | 250 partidos con eventos | **59.4%** (38/64) |
+| 🥉 **XGBoost Original** | 47k resultados históricos | **54.7%** (35/64) |
+| MLP Neural Network | 250 TSI | 54.7% (35/64) |
+| Logistic Regression | 47k históricos | 45.3% (29/64) |
+| *Baseline aleatorio* | — | *33.3%* |
 
-### Feature más importante
-**elo_diff** — Diferencia de rating Elo entre equipos (32.5% de importancia en XGBoost)
+## 🏆 Tier List — Qatar 2022
+
+| Tier | Equipos |
+|------|---------|
+| 👑 **S** | Argentina 🇦🇷, France 🇫🇷 |
+| 🏅 **A** | Croatia 🇭🇷, Morocco 🇲🇦 |
+| 🏆 **B** | Netherlands 🇳🇱, England 🏴󠁧󠁢󠁥󠁮󠁧󠁿, Brazil 🇧🇷, Portugal 🇵🇹 |
+| ⚔️ **C** | Japan 🇯🇵, Australia 🇦🇺, Senegal 🇸🇳, Switzerland 🇨🇭, Spain 🇪🇸, USA 🇺🇸, Poland 🇵🇱, South Korea 🇰🇷 |
+| 📋 **D** | Alemania, Ecuador, Camerún, Uruguay, Túnez, México, Bélgica, Ghana, Arabia Saudita, Irán, Costa Rica, Dinamarca, Serbia, Gales, Canadá, Qatar |
 
 ## Arquitectura
 
 ```
-┌─────────────────────┐     ┌───────────────────────┐
-│  Opción D (OCI)      │     │  Opción A (AWS)       │
-│  oracle-standard3    │     │  dev-vps (t3.large)   │
-│  VM.Standard3.Flex   │     │  Web App (port 80)    │
-│  4 OCPU · 64GB RAM   │     │  UI betting interactiva│
-│  Entrenamiento ML    │     │  API REST             │
-│  Pipeline de datos   │     │  Systemd persistente  │
-└──────────┬───────────┘     └───────────────────────┘
+┌──────────────────────┐     ┌───────────────────────┐     ┌──────────┐
+│  Opción D (OCI)       │     │  Opción A (AWS)       │     │  GitHub  │
+│  oracle-standard3     │     │  dev-vps              │     │          │
+│  4 OCPU · 64GB RAM    │     │  Web App (port 80)    │     │  Código  │
+│  Pipeline datos       │     │  Tier list interactiva│     │  Modelos │
+│  TSI de StatsBomb     │     │  Predicciones en vivo │     │  Datos   │
+│  Entrenamiento ML     │     │  API REST             │     │  Docs    │
+└──────────┬───────────┘     └───────────────────────┘     └──────────┘
            │
-           └──────────► GitHub
+           └──────────► Clima (Open-Meteo) + StatsBomb (eventos)
 ```
 
-## Estructura
+## Features utilizadas
 
-```
-football-analysis/
-├── data/raw/           # Datasets originales (Kaggle 1872-2024)
-├── data/processed/     # 47,399 registros con features
-├── cloud_scripts/      # Pipeline y entrenamiento
-│   ├── data_pipeline.py
-│   ├── train_models.py
-│   └── run_pipeline.py
-├── web-app/            # UI de validación (FastAPI + HTML/JS)
-│   ├── app.py
-│   ├── templates/index.html
-│   └── data/qatar2022_matches.json (64 partidos)
-├── notebooks/          # Jupyter Notebook de validación
-├── models/             # Modelos .pkl + results_summary.json
-├── deploy/             # Systemd + Nginx config
-└── README.md
-```
+| Grupo | Features | Cantidad |
+|-------|----------|----------|
+| **Históricas** | Elo, forma reciente, H2H, promedios de gol, rendimiento en eliminatorias, historial en Mundiales | 23 |
+| **TSI (eventos)** | Tiros, tiros a puerta, posesión, pases, presión, recuperaciones, intercepciones, faltas, tarjetas, córners | 39 |
+| **Total** | — | **62** |
+| **Datos de entrenamiento** | 47k resultados históricos + 250 partidos con eventos + clima | — |
 
-## Infraestructura
+## Próximos pasos 🚀
 
-| Recurso | Proveedor | Spec | IP | Estado |
-|---------|-----------|------|-----|--------|
-| oracle-standard3 | OCI (Opción D) | 4 OCPU · 64GB RAM | 157.137.219.155 | ✅ Running |
-| dev-vps | AWS (Opción A) | t3.large · 8GB RAM | 18.213.174.229 | ✅ Running |
+### Qatar 2026
+- [ ] Squad data de clasificatorias (equipos probables)
+- [ ] Datos de Transfermarkt (valores de mercado)
+- [ ] API-Football para datos frescos
+- [ ] Weather data para entrenamiento (1940-presente gratis)
+- [ ] Datos de lesiones y sanciones
+- [ ] Modelo específico para fase de grupos vs eliminatorias
+- [ ] Simulaciones Monte Carlo para el torneo completo
 
-## Setup
+### Mejoras al modelo
+- [ ] Más datos de entrenamiento con TSI (StatsBomb tiene Mundiales desde 1958)
+- [ ] PCA sobre TSI para reducir dimensionalidad
+- [ ] XGBoost con calibración de probabilidades
+- [ ] Red Neuronal con atención sobre secuencia de partidos
 
-```bash
-git clone https://github.com/thehackerman777/football-analysis.git
-cd football-analysis
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-
-# Pipeline completo
-python3 cloud_scripts/run_pipeline.py
-
-# Web app
-cd web-app && uvicorn app:app --host 0.0.0.0 --port 8080
-```
-
-## Próximas mejoras 🚀
-
-- [ ] **Incorporar squad data** (jugadores, valores de mercado, edad promedio)
-- [ ] **FIFA Rankings históricos** como feature adicional
-- [ ] **Datos de eliminatorias** para contextualizar forma reciente
-- [ ] **Cuotas de apuestas** en tiempo real
-- [ ] **TSI avanzados + PCA** (44 indicadores → componentes principales)
-- [ ] **API-Football** para datos frescos
-- [ ] **Modelo 2026** con datos de clasificación
-
-## Fuentes
-
-- [Global Football Results (1872-2024)](https://www.kaggle.com/datasets/muhammadehsan02/global-football-results-18722024)
-- [Construction of 2022 Qatar World Cup match result prediction model](https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2024.1410632/full)
-- [Predicting football match outcomes: MLP model based on TSI](https://pmc.ncbi.nlm.nih.gov/articles/PMC12708546/)
+## Fuentes de datos
+- [Kaggle: Global Football Results 1872-2024](https://www.kaggle.com/datasets/muhammadehsan02/global-football-results-18722024)
+- [StatsBomb Open Data](https://github.com/statsbomb/open-data) — Eventos detallados de partidos
+- [Open-Meteo](https://open-meteo.com/) — Clima histórico gratuito
+- [API-Football](https://www.api-football.com/) — Datos en tiempo real
