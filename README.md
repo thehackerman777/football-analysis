@@ -3,6 +3,18 @@
 Sistema de análisis predictivo de fútbol con **OCI (Opción D)** + **AWS (Opción A)**.
 Validado con los 64 partidos del **Mundial de Qatar 2022**.
 
+## Resultados 🏆
+
+| Modelo | Precisión (Qatar 2022) |
+|--------|----------------------|
+| 🥇 **XGBoost** | **54.7%** |
+| 🥈 **MLP (Neural Network)** | **53.1%** |
+| 🥉 **Logistic Regression** | **45.3%** |
+| *Baseline aleatorio* | *33.3%* |
+
+### Feature más importante
+**elo_diff** — Diferencia de rating Elo entre equipos (32.5% de importancia en XGBoost)
+
 ## Arquitectura
 
 ```
@@ -15,7 +27,7 @@ Validado con los 64 partidos del **Mundial de Qatar 2022**.
 │  Pipeline de datos   │     │  APIs ligeras         │
 └──────────┬───────────┘     └──────────────────────┘
            │
-           └──────────► GitHub (código + datasets procesados)
+           └──────────► GitHub (código + resultados)
 ```
 
 - **Opción D** (OCI): Entrenamiento de modelos, feature engineering, procesamiento masivo
@@ -23,25 +35,20 @@ Validado con los 64 partidos del **Mundial de Qatar 2022**.
 - **Sin integración** con el servidor local de OpenClaw
 - **Fase 3 (LLM/RAG) omitida** por disponibilidad de GPUs
 
-## Modelos implementados
-
-| Algoritmo | Precisión (Qatar 2022) |
-|-----------|----------------------|
-| Red Neuronal (MLP) | ~86.7% |
-| XGBoost | ~58-69% |
-| ANN | ~75.4% |
-| Regresión Logística | ~61.3% |
-
 ## Estructura del repo
 
 ```
 football-analysis/
 ├── data/
-│   ├── raw/              # Datasets originales (Kaggle 1872-2026)
-│   └── processed/        # Datos limpios y feature-engineered
-├── cloud_scripts/        # Scripts para OCI/AWS Run Command
-├── notebooks/            # Jupyter Notebooks
-│   └── validation_qatar_2022.ipynb
+│   ├── raw/              # Datasets originales (Kaggle 1872-2024)
+│   └── processed/        # Datos limpios con features
+├── cloud_scripts/        # Scripts de pipeline y entrenamiento
+│   ├── data_pipeline.py  # Descarga, limpieza, feature engineering
+│   ├── train_models.py   # Entrenamiento (XGBoost, MLP, Logistic)
+│   └── run_pipeline.py   # Orchestrador (--data-only, --train-only)
+├── notebooks/
+│   └── validation_qatar_2022.ipynb  # Validación y visualizaciones
+├── models/               # Modelos entrenados (.pkl)
 ├── docs/                 # Documentación
 ├── requirements.txt
 └── README.md
@@ -51,7 +58,7 @@ football-analysis/
 
 ```bash
 # Clonar
-git clone git@github.com:thehackerman777/football-analysis.git
+git clone https://github.com/thehackerman777/football-analysis.git
 cd football-analysis
 
 # Virtual env
@@ -60,8 +67,34 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Fuentes de datos
+### En OCI
 
-- [Global Football Results (1872-2026)](https://www.kaggle.com/datasets/muhammadehsan02/global-football-results-18722024)
-- API-Football (alineaciones, eventos, cuotas)
-- StatsBomb Open Data (eventos granulares)
+```bash
+# Pipeline completo
+python3 cloud_scripts/run_pipeline.py
+
+# Solo datos
+python3 cloud_scripts/run_pipeline.py --data-only
+
+# Solo entrenamiento (requiere datos procesados)
+python3 cloud_scripts/run_pipeline.py --train-only
+```
+
+## Datos
+
+- **47,399** partidos internacionales (1872-2024)
+- **64** partidos de Qatar 2022 para validación
+- **9** features: elo_home, elo_away, elo_diff, form_home, form_away, form_diff, is_neutral, is_worldcup, year
+
+## Próximas mejoras
+
+- [ ] Incorporar datos de cuotas de apuestas en tiempo real
+- [ ] TSI avanzados + PCA para reducción dimensional
+- [ ] Mejorar predicción de empates (class weighting)
+- [ ] Opción A: API ligera para servir predicciones
+- [ ] DVC para versionado de datasets
+
+## Fuentes
+
+- [Global Football Results (1872-2024)](https://www.kaggle.com/datasets/muhammadehsan02/global-football-results-18722024)
+- [Construction of 2022 Qatar World Cup match result prediction model](https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2024.1410632/full)
